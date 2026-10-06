@@ -1,0 +1,49 @@
+{
+  "skill": "ah-talking-head-edit",
+  "revision": 1,
+  "purpose": "检查明确独立剪辑请求的路由，避免抢占普通剪映或文案任务。预期只表示路由，不代表执行或人工验收通过。",
+  "cases": [
+    {
+      "id": "positive-01",
+      "split": "development",
+      "prompt": "做独立口播剪辑，按我核听的保留区间和 SRT 输出自有工程、视频和同步字幕。",
+      "expected": "invoke",
+      "reason": "明确选择独立口播剪辑并提供本产品输入输出范围"
+    },
+    {
+      "id": "positive-02",
+      "split": "development",
+      "prompt": "使用 $ah-talking-head-edit 处理这段授权视频，保留原速，不加音乐。",
+      "expected": "invoke",
+      "reason": "显式调用 Skill"
+    },
+    {
+      "id": "positive-03",
+      "split": "holdout",
+      "prompt": "这次不依赖旧引擎剪片，用你这个新项目按审核边界剪我自己的口播并交付 JSON、MP4、SRT。",
+      "expected": "invoke",
+      "reason": "明确要求本独立项目和对应产品交付"
+    },
+    {
+      "id": "negative-01",
+      "split": "development",
+      "prompt": "在剪映里帮我剪这条视频，完成可回放的原生草稿。",
+      "expected": "do_not_invoke",
+      "reason": "普通剪映原生任务不应被新 Skill 默默接管"
+    },
+    {
+      "id": "negative-02",
+      "split": "development",
+      "prompt": "帮我写一篇抖音口播稿，主题是产品经理怎么学 AI。",
+      "expected": "do_not_invoke",
+      "reason": "写稿不是本 Skill 的剪辑输入输出流程"
+    },
+    {
+      "id": "negative-03",
+      "split": "holdout",
+      "prompt": "这段录音还没有逐字稿，先做 ASR，转写成带时间戳的字幕就行。",
+      "expected": "do_not_invoke",
+      "reason": "只要求转写，本版依赖已有可靠时间戳输入而不提供 ASR"
+    }
+  ]
+}
