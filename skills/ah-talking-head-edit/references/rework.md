@@ -39,6 +39,44 @@ python3 scripts/pause_audit.py --video 无字幕母版.mp4 --project 自有工�
 
 机器验证、显示覆盖、文字准确、语音同步、原生持久化、人工听音分别报告。不能为得到通过删除保护发音、改松验证器或把待核听状态改成已通过。
 
+## 逐项复核记录
+
+使用 `scripts/review_audit.py` 检查复核登记是否完整、是否属于当前母版，不依靠 Agent 临时记忆把 CHECK 当成已完成：
+
+```bash
+python3 scripts/review_audit.py --video 母版.mp4 --project 自有工程.json --pause-report 停顿报告.json --review 复核登记.json --native --report 新复核检查.json
+```
+
+复核登记结构如下，哈希填写实际文件的 SHA-256，不能猜值：
+
+```json
+{
+  "video_sha256": "实际母版哈希",
+  "project_sha256": "实际工程哈希",
+  "pause_report_sha256": "实际停顿报告哈希",
+  "decisions": [
+    {"candidate": 1, "decision": "KEEP", "reason": "实际删留理由", "reviewer": "实际核听者", "listening_evidence": "实际核听区间和结果"}
+  ],
+  "stages": {
+    "audio_inventory": {"status": "pending"},
+    "semantics": {"status": "pending"},
+    "cut_listening": {"status": "pending"},
+    "subtitle_wording": {"status": "pending"},
+    "subtitle_sync": {"status": "pending"},
+    "full_listening": {"status": "pending"},
+    "native_captions": {"status": "pending"},
+    "caption_coverage": {"status": "pending"},
+    "native_persistence": {"status": "pending"}
+  }
+}
+```
+
+- `candidate` 是绑定报告中候选从 1 开始的编号。每个候选都要登记；缺项、CHECK、无理由或无核听依据均保持 `needs_review`。
+- DELETE 代表尚待剪掉，不能标为当前母版已经解决。实际重剪后重建工程、渲染、检查并用新报告重新登记，不能沿用旧候选编号。
+- 各阶段实际完成后填写 `status: verified`、`reviewer` 和非空 `evidence`，写清核验范围及真实结果；禁止仅填写“通过”而没有依据。`--native` 要求原生识别、覆盖及持久化三项；独立外置字幕模式不要求这些项。
+- `review_records_complete` 只说明当前版本的登记完整。工具不能核实人是否真正听过，也不能替代媒体解码或剪映现场读回；登记之外仍需保留可核查报告和播放证据。
+- 音轨清单未核实完整时，`audio_inventory` 保持 pending。音轨报告的 `passed_scoped_checks` 或 `passed_declared_inventory_checks` 仅适用于所提交事件与声明清单，`whole_video_acceptance` 始终为未确立，不能据此宣称全片无重复。
+
 ## 外部模型审查
 
 遇到具体流程疑点且用户授权外部模型时，可把已核实案例和问题发给指定模型；先核对页面账号和模型。模型回复仅是建议：对照原始记录和实际脚本验证后再采用。未经听音或没有工程读回依据的诊断不升级为事实；模型拒答或页面不可用时如实记录，继续能完成的本地核查。
