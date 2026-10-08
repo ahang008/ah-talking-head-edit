@@ -33,3 +33,20 @@ class ReviewGateTests(unittest.TestCase):
         p,r=packet();out=m.audit(p,r,'v','p','r')
         self.assertEqual(out['status'],'review_records_complete')
         self.assertFalse(out['limits']['listening_performed_by_script'])
+    def test_referenced_pack_must_be_supplied_and_verified(self):
+        p,r=packet();r['decisions'][0]['listening_pack']={'index_sha256':'i','item_id':'candidate-001'}
+        self.assertEqual(m.audit(p,r,'v','p','r')['problems'][0]['kind'],'unverified_listening_pack')
+    def test_wrong_candidate_cannot_borrow_another_items_audio(self):
+        p,r=packet();r['decisions'][0]['listening_pack']={'index_sha256':'i','item_id':'candidate-002'}
+        pack={'video_sha256':'v','project_sha256':'p','pause_report_sha256':'r','items':[{'id':'candidate-002','candidate':2}]}
+        self.assertEqual(m.audit(p,r,'v','p','r',packs={'i':pack})['problems'][0]['kind'],'wrong_listening_item')
+    def test_old_pack_is_rejected_even_with_same_candidate_number(self):
+        p,r=packet();r['decisions'][0]['listening_pack']={'index_sha256':'i','item_id':'candidate-001'}
+        pack={'video_sha256':'old','project_sha256':'p','pause_report_sha256':'r','items':[{'id':'candidate-001','candidate':1}]}
+        self.assertEqual(m.audit(p,r,'v','p','r',packs={'i':pack})['problems'][0]['kind'],'stale_listening_pack')
+    def test_bound_pack_still_does_not_prove_listening(self):
+        p,r=packet();r['decisions'][0]['listening_pack']={'index_sha256':'i','item_id':'candidate-001'}
+        pack={'video_sha256':'v','project_sha256':'p','pause_report_sha256':'r','items':[{'id':'candidate-001','candidate':1}]}
+        result=m.audit(p,r,'v','p','r',packs={'i':pack})
+        self.assertEqual(result['status'],'review_records_complete')
+        self.assertFalse(result['limits']['listening_performed_by_script'])
