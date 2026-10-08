@@ -40,5 +40,23 @@ class NativeCaptionTests(unittest.TestCase):
             self.assertFalse(output.exists())
             self.assertFalse(report.exists())
 
+    def test_native_comparison_rejects_unapproved_changes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            d = Path(temp)
+            native = d / 'native.srt'
+            native.write_text('1\n00:00:00,200 --> 00:00:00,600\n阿航\n\n2\n00:00:01,100 --> 00:00:01,800\n第二句\n\n')
+            changes = d / 'changes.json'
+            changes.write_text(json.dumps([{'cue':1,'before':'阿航','after':'阿杭'}]))
+            good = '1\n00:00:00,000 --> 00:00:01,100\n阿杭\n\n2\n00:00:01,100 --> 00:00:02,500\n第二句\n\n'
+            variants = [good, good.replace('第二句','额外改字'), good.replace('01,100','01,200'), '1\n00:00:00,000 --> 00:00:02,500\n阿杭第二句\n\n']
+            for n, text in enumerate(variants):
+                final = d / f'final{n}.srt'; final.write_text(text)
+                report = d / f'report{n}.json'
+                run = subprocess.run([sys.executable,str(SCRIPT),'audit','--srt',str(final),'--native-srt',str(native),'--corrections',str(changes),'--duration','2.5','--report',str(report)],capture_output=True,text=True)
+                self.assertEqual(run.returncode, 0 if n == 0 else 1, run.stderr)
+                result = json.loads(report.read_text())
+                self.assertEqual(result['human_listening'], 'unverified')
+                self.assertEqual(result['native_comparison']['status'], 'passed' if n == 0 else 'failed')
+
 if __name__ == "__main__":
     unittest.main()

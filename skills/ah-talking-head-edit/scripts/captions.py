@@ -6,6 +6,8 @@ import json
 import math
 from pathlib import Path
 import sys
+import subprocess
+import tempfile
 
 from clip import EditError, parse_srt, srt_text
 
@@ -36,6 +38,7 @@ def main():
     parser.add_argument('--duration', required=True, type=float)
     parser.add_argument('--output')
     parser.add_argument('--corrections', help='JSON list of {cue, before, after}')
+    parser.add_argument('--native-srt', help='Original native SRT for final export comparison (audit only)')
     parser.add_argument('--report', required=True)
     args = parser.parse_args()
     if not math.isfinite(args.duration) or args.duration <= 0:
@@ -44,10 +47,14 @@ def main():
     report_path = Path(args.report).resolve()
     output = Path(args.output).resolve() if args.output else None
     correction_path = Path(args.corrections).resolve() if args.corrections else None
-    inputs = {source} | ({correction_path} if correction_path else set())
+    native = Path(args.native_srt).resolve() if args.native_srt else None
+    if native and args.command != 'audit':
+        raise EditError('--native-srt is audit-only')
+    inputs = ({native} if native else set()) | {source} | ({correction_path} if correction_path else set())
     outputs = [report_path] + ([output] if output else [])
     if len(set(outputs)) != len(outputs) or any(p in inputs or p.exists() for p in outputs):
         raise EditError('Use distinct new output and report paths; do not overwrite inputs')
+    input_hashes = {str(p): sha(p) for p in inputs}
     cues = parse_srt(source, args.duration + 0.00051)
     input_hash = sha(source)
     changes = []
@@ -77,7 +84,6 @@ def main():
         mapped = [{'timeline_start': c['source_start'], 'timeline_end': c['source_end'], 'text': c['text']} for c in cues]
         text = srt_text(mapped)
         # Validate millisecond rounding before writing any result.
-        import tempfile
         with tempfile.TemporaryDirectory() as temp:
             check = Path(temp) / 'check.srt'
             check.write_text(text, encoding='utf-8')
@@ -97,9 +103,33 @@ def main():
                            for i, (old, c) in enumerate(zip(original_ranges, cues))
                            if old != (c['source_start'], c['source_end'])]})
     else:
-        if output or correction_path:
-            raise EditError('audit is read-only and accepts no output or corrections')
+        if output or (correction_path and not native):
+            raise EditError('audit accepts corrections only with --native-srt and no output')
         result = audit(cues, args.duration)
+        if native:
+            with tempfile.TemporaryDirectory() as temp:
+                expected = Path(temp) / 'expected.srt'
+                cmd = [sys.executable, str(Path(__file__).resolve()), 'prepare', '--srt', str(native),
+                       '--duration', str(args.duration), '--output', str(expected), '--report', str(Path(temp) / 'prepare.json')]
+                if correction_path:
+                    cmd += ['--corrections', str(correction_path)]
+                run = subprocess.run(cmd, capture_output=True, text=True)
+                if run.returncode:
+                    raise EditError('Native comparison preparation failed: ' + run.stderr.strip())
+                allowed = parse_srt(expected, args.duration + 0.00051)
+            mismatches = []
+            if len(cues) != len(allowed):
+                mismatches.append({'kind': 'cue_count_changed'})
+            for n, (actual, target) in enumerate(zip(cues, allowed), 1):
+                for key in ('text', 'source_start', 'source_end'):
+                    if actual[key] != target[key]:
+                        mismatches.append({'kind': 'unauthorized_' + key, 'cue': n})
+            result['native_comparison'] = {'status': 'failed' if mismatches else 'passed',
+                                           'mismatches': mismatches, 'input_sha256': input_hashes}
+            if mismatches:
+                result['status'] = 'failed'
+    if input_hashes != {str(p): sha(p) for p in inputs}:
+        raise EditError('An input changed during caption processing')
     result.update({'input': str(source), 'input_sha256': input_hash,
                    'caption_origin': 'caller_must_verify_native_recognition'})
     report_path.parent.mkdir(parents=True, exist_ok=True)
