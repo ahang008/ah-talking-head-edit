@@ -39,7 +39,7 @@ description: "独立口播剪辑试用版。用授权本地视频、现成时间
 
 ## 剪映字幕模式
 
-完成最终剪口和速度后，无源 SRT 创建并渲染无字幕母版，再按原生字幕流程操作。`captions.py prepare --srt 原生识别.srt --duration 实际主视频秒数 --corrections 错字修正.json --output 新字幕.srt --report 修正报告.json` 保留分段并补显示空隙。修正项为 `[{"cue": 1, "before": "阿航", "after": "阿杭"}]`，仅用于真实出现且核实的错字，不是全局替换词表。最终原生工程再导出 SRT，运行 `captions.py audit --srt 最终.srt --native-srt 原生识别.srt --corrections 错字修正.json --duration 实际主视频秒数 --report 新验收报告.json`，对照原生分段和允许修改。
+完成最终剪口和速度后，无源 SRT 创建并渲染无字幕母版，再按原生字幕流程操作。`captions.py prepare --srt 原生识别.srt --duration 实际主视频秒数 --corrections 错字修正.json --output 新字幕.srt --report 修正报告.json` 保留分段并补显示空隙。修正项为 `[{"cue": 1, "before": "阿航", "after": "阿杭"}]`，仅用于真实出现且核实的错字，不是全局替换词表。最终原生工程再导出 SRT，运行 `captions.py audit --srt 最终.srt --native-srt 原生识别.srt --corrections 错字修正.json --duration 实际主视频秒数 --report 新验收报告.json`，对照原生分段和允许修改。按原生字幕参考的“当前交付文件绑定”登记最终工程、MP4 与字幕关联，复制到用户目录后核对目标文件，不用母版检查结果替代最终导出验收。
 
 ## 回复结果
 
