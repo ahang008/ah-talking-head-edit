@@ -63,13 +63,14 @@ python3 scripts/clip.py inspect --project 任务/02-独立口播剪辑工程.jso
 python3 scripts/clip.py validate --project 任务/02-独立口播剪辑工程.json
 python3 scripts/clip.py render --project 任务/02-独立口播剪辑工程.json --output-dir 任务/03-独立口播剪辑交付
 python3 scripts/clip.py audit --output-dir 任务/03-独立口播剪辑交付
+python3 scripts/pause_audit.py --video 任务/03-独立口播剪辑交付/edited.mp4 --project 任务/02-独立口播剪辑工程.json --render-report 任务/03-独立口播剪辑交付/validation-report.json --report 任务/04-停顿候选.json
 ```
 
 在有空格的实际路径外加 shell 引号。`doctor` 未通过时依据其输出处理缺失运行条件，不自动安装全局依赖。导出和审计前先查看对应 `--help`。
 
 脚本先从 `PATH` 查找 FFmpeg 和 ffprobe，再使用 Homebrew 路径兜底；各子命令均可用 `--ffmpeg` 和 `--ffprobe` 指定可执行文件路径。
 
-成功导出后读取目录内的 `edited.mp4`、`captions.srt` 和 `validation-report.json`。无源 SRT 时脚本只输出空字幕文件，不能将它宣称为已生成字幕；用户要求字幕时须先提供可靠时间戳和文字。失败报告与残留文件不得列为完成交付。
+成功导出后读取目录内的 `edited.mp4`、`captions.srt` 和 `validation-report.json`。无源 SRT 时脚本只输出空字幕文件，不能将它宣称为已生成字幕。用户选择剪映识别字幕时，无源 SRT 先完成母版，再按 [jianying-captions.md](jianying-captions.md) 通过官方界面识别；不要求用户先提供最终字幕。外置源字幕模式才需要已有可靠时间戳和文字。失败报告与残留文件不得列为完成交付。
 
 ## 改计划与验收
 
@@ -81,4 +82,4 @@ python3 scripts/clip.py audit --output-dir 任务/03-独立口播剪辑交付
 - 以实际返回的产物路径和审计内容汇报，不凭扩展名、JSON 存在或进程退出判断全部完成。
 - 单列人工听音状态。仅用户提供的审核边界只能记为用户已核听；代理只有实际听过才记录代理核听。机器检查不能升级为全片人工核听。
 - 外置 SRT 的局部替换不会改画面内烧录字幕。输入成片已有字幕时，输出会保留这些画面；说明画面旧字幕与外置字幕的差异，不宣称完成画面字幕替换。
-- 原生剪映草稿、直接导入、音乐混合、自动 ASR 和自动静音剪切均不属于本版交付。
+- 独立 CLI 不自动生成原生剪映草稿或操作剪映；用户选择原生字幕流程时，可通过官方界面导入母版、识别、保存和导出，逐项验收。音乐混合、本地自动 ASR 和自动静音剪切不属于本版独立 CLI 功能。
