@@ -6,7 +6,7 @@
 
 运行依赖 Python 3.9 或更新版本的标准库，以及单独安装的 FFmpeg、ffprobe。可执行文件先从 PATH 查找，再使用 `/opt/homebrew/bin/ffmpeg` 和 `/opt/homebrew/bin/ffprobe` 兜底。每个命令支持 `--ffmpeg` 和 `--ffprobe` 覆盖。编码依赖 `libx264` 和 `aac`。`doctor` 检查版本和实际需要的编码器、滤镜。
 
-本实现未读取或复制旧 yichen、jianying-headless 引擎、Skill、模板、测试、schema、源码截取或记忆文件。此声明描述本次实现过程，不是法律保证。
+首版核心代码按独立实现流程编写；后续按用户要求迁入其剪辑规则。当前不调用或打包旧 yichen、jianying-headless 后端代码、模板和私有资产，过程见仓库 PROVENANCE.md。
 
 ## 输入计划
 
@@ -122,3 +122,7 @@ python3 -B -m unittest discover -s tests -p test_clip.py -v
 ```
 
 单独安装Skill时不必运行开发测试套件，用 `doctor` 和当次产物的 `audit` 验证运行环境与实际输出。开发测试的合成素材和输出只写入 `evidence/core-tests`，不纳入发布包。测试检查计划拒绝、保护语音、字幕歧义、速度映射、哈希变化、路径别名、失败回执和实际音视频编码解码。不同颜色和不同频率的合成片段验证实际画面及声音取段与顺序；20 个含小数帧边界的片段验证舍入误差不逐段累计。
+
+## 原生字幕附加流程
+
+本格式和 CLI 的裁剪行为保持独立。剪映官方界面生成的最终字幕在剪后目标时间轴上，使用 `scripts/captions.py` 单独处理，不能当作原片时间戳塞入本格式。原生识别、旧轨清空、错字修正、连续显示及最终导出见 [jianying-captions.md](jianying-captions.md)。
