@@ -41,6 +41,21 @@ python3 scripts/pause_audit.py --video 无字幕母版.mp4 --project 自有工�
 
 ## 逐项复核记录
 
+### 先生成可核听的对照
+
+发现疑点后用 `scripts/listening_pack.py` 生成有上下文的试听包，优先跨剪口候选，再处理长停顿；需要检查某个明确接点时加 `--cut`，编号是该接点左侧 clip 从 1 开始的序号。
+
+```bash
+python3 scripts/listening_pack.py --video 母版.mp4 --project 自有工程.json --render-report validation-report.json --pause-report 停顿报告.json --context 2 --limit 10 --cut 1 --output-dir 新试听目录
+```
+
+- 剪后短窗从实际母版提取，包含整个候选及前后上下文。切口原声分别导出左端和右端上下文，保留原速，不把不连续源片强行拼成一个虚构的“剪前”版本。内部停顿另提供其映射原片位置的独立短窗。
+- `listening-index.json` 标明原片区间、对应 clip、剪后播放速度、文件哈希和剩余候选编号。原声短窗含边界外上下文，不代表这些声音应全部保留；任何修改仍须回到完整表达判断。
+- 默认前后各 2 秒只是试听起点，听不清句意时增加 `--context`，输出新目录。速度差已明示；不得因原速与剪后语速不同就误判重复或停顿。
+- 不加淡入淡出、不调整响度、不调用 ASR；短窗不替代完整成片核听。`--limit` 仅控制本次导出数量，余项不能自动判 KEEP。没有真正核听时仍是 `exported_unlistened`。
+- 核听或引用前用同一组母版、工程、render 报告和停顿报告参数，将 `--output-dir` 换成 `--verify-dir 现有试听目录`，核对版本及各 WAV 哈希。剪口或文件改变时重新生成，不引用旧包。索引的切口相对秒数便于定位，不向音频插入提示音。
+- 不按低能量自动保证语义边界；外部模型建议的 0.6、1.0、0.3 秒缓冲和能量阈值仅是示例，不成为本项目自动剪口规则。试听短窗结尾处的截断不等于母版发生吞字，需扩大上下文核实。
+
 使用 `scripts/review_audit.py` 检查复核登记是否完整、是否属于当前母版，不依靠 Agent 临时记忆把 CHECK 当成已完成：
 
 ```bash
